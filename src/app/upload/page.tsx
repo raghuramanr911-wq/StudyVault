@@ -179,7 +179,7 @@ function UploadForm() {
               
               <label className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium rounded-full hover:bg-gray-50 cursor-pointer transition-colors shadow-sm">
                 Browse Files
-                <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileChange} />
+                <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={handleFileChange} />
               </label>
             </div>
           )}
