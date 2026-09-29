@@ -24,13 +24,13 @@ export function DocumentRow({ document }: { document: Document }) {
         setShowDropdown(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.document.addEventListener("mousedown", handleClickOutside);
+    return () => window.document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!confirm("Are you sure you want to delete this document?")) return;
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
     
     setIsDeleting(true);
     try {
@@ -60,7 +60,10 @@ export function DocumentRow({ document }: { document: Document }) {
     <div 
       className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-lg hover:shadow-sm hover:border-gray-200 transition-all duration-200 mb-2"
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setShowDropdown(false) || setIsHovered(false)}
+      onMouseLeave={() => {
+        setShowDropdown(false);
+        setIsHovered(false);
+      }}
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", iconColor)}>
