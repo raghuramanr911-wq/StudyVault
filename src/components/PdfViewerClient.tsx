@@ -179,11 +179,19 @@ export function PdfViewerClient({ document, subject }: PdfViewerClientProps) {
 
   // Basic highlight function provided by react-pdf
   const highlightPattern = (text: string, pattern: string) => {
+    if (!text) return "";
     if (!pattern) return text;
-    return text.replace(new RegExp(pattern, 'gi'), match => `<mark>${match}</mark>`);
+    try {
+      return text.replace(new RegExp(pattern, 'gi'), match => `<mark>${match}</mark>`);
+    } catch (e) {
+      return text;
+    }
   };
 
-  const textRenderer = (textItem: any) => highlightPattern(textItem.str, searchText);
+  const textRenderer = (textItem: any) => {
+    if (!textItem || typeof textItem.str !== 'string') return "";
+    return highlightPattern(textItem.str, searchText);
+  };
 
   return (
     <div ref={viewerRef} className="fixed inset-0 z-50 flex flex-col bg-gray-50 fullscreen-override">
@@ -295,17 +303,27 @@ export function PdfViewerClient({ document, subject }: PdfViewerClientProps) {
             <div className="text-white mt-10">Failed to load PDF. Please make sure the file exists.</div>
           }
         >
-          {Array.from(new Array(numPages || 0), (el, index) => (
-            <div key={index} data-page-number={index + 1} className="mb-4 shadow-xl">
-              <Page 
-                pageNumber={index + 1} 
-                scale={scale} 
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                customTextRenderer={textRenderer}
-              />
-            </div>
-          ))}
+          {Array.from(new Array(numPages || 0), (el, index) => {
+            const pageNum = index + 1;
+            // Only render pages near the current page to prevent memory crashes on large PDFs
+            const isNear = Math.abs(pageNumber - pageNum) <= 4;
+            
+            return (
+              <div key={index} data-page-number={pageNum} className="mb-4 shadow-xl min-h-[600px] w-full flex flex-col items-center justify-center bg-white text-gray-400">
+                {isNear ? (
+                  <Page 
+                    pageNumber={pageNum} 
+                    scale={scale} 
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    customTextRenderer={textRenderer}
+                  />
+                ) : (
+                  <div>Loading Page {pageNum}...</div>
+                )}
+              </div>
+            );
+          })}
         </Document>
       </div>
       
