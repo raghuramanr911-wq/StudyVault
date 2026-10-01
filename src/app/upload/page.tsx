@@ -7,6 +7,8 @@ import { UploadCloud, File, CheckCircle2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+import { supabase } from "@/lib/supabase";
+
 function UploadForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -59,22 +61,48 @@ function UploadForm() {
     setError(null);
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', file.name.replace(/\.[^/.]+$/, ""));
-      formData.append('subjectId', selectedSubject);
-      formData.append('categoryId', 'cat-1'); // Defaulting to Notes for now, could be dynamic
+      // 1. Upload directly to Supabase Storage to bypass Vercel 4.5MB limit
+      const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '-')}`;
+      const filePath = `${selectedSubject}/${fileName}`;
       
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      const result = await response.json();
+      if (storageError) throw new Error(storageError.message);
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
-      }
+      // 2. Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      // 3. Save to database
+      const doc = {
+        id: `doc-${crypto.randomUUID()}`,
+        name: file.name.replace(/\.[^/.]+$/, ""),
+        subjectId: selectedSubject,
+        categoryId: 'cat-1',
+        fileUrl: publicUrl,
+        fileType: file.type || 'application/octet-stream',
+        fileSize: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+        uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        updatedAt: new Date().toISOString(),
+        unit: '',
+        topic: '',
+        tags: [],
+        description: '',
+        favorite: false,
+        lastOpenedAt: null,
+        storagePath: filePath,
+        progress: null,
+        pages: null
+      };
+
+      const { error: dbError } = await supabase.from('documents').insert([doc]);
+      if (dbError) throw new Error(dbError.message);
 
       router.refresh();
       setUploadComplete(true);
